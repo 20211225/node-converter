@@ -3,13 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全能节点链接生成器</title>
+    <title>全能节点链接工具箱</title>
     <!-- 引入 js-yaml 库来解析 YAML 文本 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
     <style>
         :root {
             --primary-color: #4F46E5;
             --primary-hover: #4338CA;
+            --warning-color: #F59E0B;
+            --warning-hover: #D97706;
+            --success-color: #10B981;
+            --success-hover: #059669;
             --bg-color: #F3F4F6;
             --card-bg: #FFFFFF;
             --text-main: #1F2937;
@@ -41,7 +45,6 @@
             margin-top: 0;
             font-size: 28px;
             font-weight: 700;
-            letter-spacing: -0.5px;
         }
 
         p.subtitle {
@@ -89,39 +92,35 @@
 
         button { 
             flex: 1;
-            padding: 14px 24px; 
-            background-color: var(--primary-color); 
+            padding: 14px 20px; 
             color: white; 
             border: none; 
             border-radius: 10px; 
-            font-size: 16px; 
+            font-size: 15px; 
             font-weight: 600;
             cursor: pointer; 
             transition: all 0.2s ease; 
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 6px;
         }
+        
+        .btn-primary { background-color: var(--primary-color); }
+        .btn-primary:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
 
-        button:hover { 
-            background-color: var(--primary-hover); 
-            transform: translateY(-1px);
-        }
+        .btn-warning { background-color: var(--warning-color); }
+        .btn-warning:hover { background-color: var(--warning-hover); transform: translateY(-1px); }
 
-        button.btn-secondary {
-            background-color: #10B981;
-        }
-
-        button.btn-secondary:hover {
-            background-color: #059669;
-        }
+        .btn-success { background-color: var(--success-color); }
+        .btn-success:hover { background-color: var(--success-hover); transform: translateY(-1px); }
 
         #output {
-            height: 180px;
+            height: 220px;
             margin-bottom: 0;
             background-color: #F3F4F6;
             cursor: text;
+            white-space: pre-wrap;
         }
 
         @media (max-width: 640px) {
@@ -133,43 +132,70 @@
 <body>
 
 <div class="container">
-    <h1>全能节点链接生成器</h1>
-    <p class="subtitle">支持 VLESS / VMess / Shadowsocks / Hysteria2 / Trojan 协议转换</p>
+    <h1>全能节点链接工具箱</h1>
+    <p class="subtitle">支持 YAML 转链接 ｜ 支持 Base64 订阅一键解码</p>
     
-    <label class="label">输入 Clash YAML 配置：</label>
-    <textarea id="yamlInput" placeholder="- name: 🇭🇰 香港节点&#10;  server: 1.1.1.1&#10;  port: 443&#10;  type: trojan..."></textarea>
+    <label class="label">输入源数据（Clash YAML 代码 或 Base64 订阅乱码）：</label>
+    <textarea id="yamlInput" placeholder="在此粘贴 YAML 配置（- name: ...）&#10;或者粘贴 Base64 订阅乱码（例如 dmxlc3M6Ly8...）"></textarea>
     
     <div class="btn-group">
-        <button onclick="generateLinks()">
+        <button class="btn-primary" onclick="generateLinks()">
             <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-            一键转换链接
+            YAML 转链接
         </button>
-        <button class="btn-secondary" onclick="copyResult()">
+        <button class="btn-warning" onclick="decodeBase64()">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+            Base64 解码
+        </button>
+        <button class="btn-success" onclick="copyResult()">
             <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
-            复制生成结果
+            复制结果
         </button>
     </div>
     
-    <label class="label">转换结果：</label>
-    <textarea id="output" readonly placeholder="点击转换后，这里会显示可直接导入的分享链接..."></textarea>
+    <label class="label">转换/解码结果：</label>
+    <textarea id="output" readonly placeholder="点击上方按钮后，这里会显示可直接导入的分享链接..."></textarea>
 </div>
 
 <script>
-    // 解决中文 Base64 编码报错的问题
     function utf8_to_b64(str) {
         return window.btoa(unescape(encodeURIComponent(str)));
     }
 
-    // 复制功能
     function copyResult() {
         const output = document.getElementById('output');
         if (!output.value.trim()) {
-            alert("没有可复制的内容，请先点击转换！");
+            alert("没有可复制的内容，请先点击转换或解码！");
             return;
         }
         output.select();
         document.execCommand('copy');
         alert("🎉 链接已成功复制到剪贴板！");
+    }
+
+    // 新增：Base64 订阅解码功能
+    function decodeBase64() {
+        const input = document.getElementById('yamlInput').value.trim();
+        const output = document.getElementById('output');
+        
+        if (!input) {
+            alert("请先输入 Base64 编码的订阅内容！");
+            return;
+        }
+
+        try {
+            // 兼容 URL-Safe Base64 格式并补全等号
+            let base64Str = input.replace(/-/g, '+').replace(/_/g, '/');
+            while (base64Str.length % 4) {
+                base64Str += '=';
+            }
+            
+            // 解码并处理中文 UTF-8 问题
+            const decodedStr = decodeURIComponent(escape(window.atob(base64Str)));
+            output.value = decodedStr;
+        } catch (e) {
+            output.value = "解码失败，请确认输入的是有效的 Base64 订阅内容。\n\n错误详情: " + e.message;
+        }
     }
 
     function generateLinks() {
@@ -182,22 +208,16 @@
         }
 
         try {
-            // 解析 YAML
             const data = jsyaml.load(yamlText);
-            // 兼容带有 "proxies:" 顶层键的情况，或者直接是列表的情况
             const proxies = data.proxies ? data.proxies : (Array.isArray(data) ? data : [data]);
-            
             let resultLinks = [];
 
             proxies.forEach(p => {
                 if (!p || !p.type) return;
-
                 const encodedName = encodeURIComponent(p.name);
 
                 if (p.type === 'vless') {
-                    // 组装 VLESS 链接
                     let link = `vless://${p.uuid}@${p.server}:${p.port}?encryption=none`;
-                    
                     if (p.tls) link += `&security=tls`;
                     if (p['reality-opts']) {
                         link = link.replace('&security=tls', '');
@@ -206,64 +226,40 @@
                     if (p.servername || p.sni) link += `&sni=${p.servername || p.sni}`;
                     if (p['client-fingerprint']) link += `&fp=${p['client-fingerprint']}`;
                     if (p.flow) link += `&flow=${p.flow}`;
-                    
                     link += `#${encodedName}`;
                     resultLinks.push(link);
-
                 } else if (p.type === 'vmess') {
-                    // 组装 VMess 链接
                     let vmessObj = {
-                        "v": "2",
-                        "ps": p.name,
-                        "add": p.server,
-                        "port": String(p.port),
-                        "id": p.uuid,
-                        "aid": String(p.alterId || 0),
-                        "scy": p.cipher || "auto",
-                        "net": p.network || "tcp",
-                        "type": "none",
+                        "v": "2", "ps": p.name, "add": p.server, "port": String(p.port),
+                        "id": p.uuid, "aid": String(p.alterId || 0), "scy": p.cipher || "auto",
+                        "net": p.network || "tcp", "type": "none",
                         "host": p.servername || (p['ws-opts'] && p['ws-opts'].headers && p['ws-opts'].headers.Host) || "",
-                        "path": (p['ws-opts'] && p['ws-opts'].path) || "",
-                        "tls": p.tls ? "tls" : ""
+                        "path": (p['ws-opts'] && p['ws-opts'].path) || "", "tls": p.tls ? "tls" : ""
                     };
-                    
-                    let b64Str = utf8_to_b64(JSON.stringify(vmessObj));
-                    resultLinks.push(`vmess://${b64Str}`);
-
+                    resultLinks.push(`vmess://${utf8_to_b64(JSON.stringify(vmessObj))}`);
                 } else if (p.type === 'ss') {
-                    // 组装 Shadowsocks (SIP002 标准格式)
                     let credentials = utf8_to_b64(`${p.cipher}:${p.password}`);
                     resultLinks.push(`ss://${credentials}@${p.server}:${p.port}#${encodedName}`);
-
                 } else if (p.type === 'hysteria2') {
-                    // 组装 Hysteria2 链接
                     let params = new URLSearchParams();
                     if (p.sni) params.append('sni', p.sni);
                     if (p['skip-cert-verify']) params.append('insecure', '1');
-                    
                     let paramStr = params.toString() ? `?${params.toString()}` : '';
                     resultLinks.push(`hy2://${p.password}@${p.server}:${p.port}${paramStr}#${encodedName}`);
-                    
                 } else if (p.type === 'trojan') {
-                    // 组装 Trojan 链接
                     let link = `trojan://${p.password}@${p.server}:${p.port}`;
-                    
                     let params = new URLSearchParams();
                     if (p.sni) params.append('sni', p.sni);
                     if (p['skip-cert-verify']) params.append('allowInsecure', '1');
-                    
                     let paramStr = params.toString() ? `?${params.toString()}` : '';
                     resultLinks.push(`${link}${paramStr}#${encodedName}`);
-
                 } else {
                     resultLinks.push(`[提示] 暂不支持自动转换 ${p.type} 协议: ${p.name}`);
                 }
             });
-
             output.value = resultLinks.join('\n\n');
-
         } catch (e) {
-            output.value = "解析失败，请检查输入的 YAML 格式是否正确。\n错误详情: " + e.message;
+            output.value = "解析失败，如果这是Base64订阅乱码，请点击【Base64 解码】按钮。\n\n错误详情: " + e.message;
         }
     }
 </script>
