@@ -134,10 +134,10 @@
 
 <div class="container">
     <h1>全能节点链接生成器</h1>
-    <p class="subtitle">支持 VLESS / VMess / Shadowsocks / Hysteria2 协议转换</p>
+    <p class="subtitle">支持 VLESS / VMess / Shadowsocks / Hysteria2 / Trojan 协议转换</p>
     
     <label class="label">输入 Clash YAML 配置：</label>
-    <textarea id="yamlInput" placeholder="- name: 🇭🇰 香港节点&#10;  server: 1.1.1.1&#10;  port: 443&#10;  type: vless..."></textarea>
+    <textarea id="yamlInput" placeholder="- name: 🇭🇰 香港节点&#10;  server: 1.1.1.1&#10;  port: 443&#10;  type: trojan..."></textarea>
     
     <div class="btn-group">
         <button onclick="generateLinks()">
@@ -244,6 +244,17 @@
                     let paramStr = params.toString() ? `?${params.toString()}` : '';
                     resultLinks.push(`hy2://${p.password}@${p.server}:${p.port}${paramStr}#${encodedName}`);
                     
+                } else if (p.type === 'trojan') {
+                    // 组装 Trojan 链接
+                    let link = `trojan://${p.password}@${p.server}:${p.port}`;
+                    
+                    let params = new URLSearchParams();
+                    if (p.sni) params.append('sni', p.sni);
+                    if (p['skip-cert-verify']) params.append('allowInsecure', '1');
+                    
+                    let paramStr = params.toString() ? `?${params.toString()}` : '';
+                    resultLinks.push(`${link}${paramStr}#${encodedName}`);
+
                 } else {
                     resultLinks.push(`[提示] 暂不支持自动转换 ${p.type} 协议: ${p.name}`);
                 }
